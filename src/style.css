@@ -380,7 +380,7 @@ html, body {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-bottom: 10px;
 }
 
@@ -445,7 +445,7 @@ html, body {
 
 .wx-sub {
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-top: 4px;
 }
 
@@ -522,7 +522,7 @@ html, body {
 
 .wx-hour-wind {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .wx-hour-temp {
@@ -645,8 +645,19 @@ html, body {
   color: var(--text-secondary);
 }
 
+.sun-row .mono {
+  color: var(--text-primary);
+}
+
+/* Past valid events — dimmed but still readable */
 .sun-past .sun-label,
 .sun-past .mono {
+  color: var(--text-secondary);
+}
+
+/* Invalid events (no data, shows —) — most dimmed */
+.sun-invalid .sun-label,
+.sun-invalid .mono {
   color: var(--text-muted);
 }
 
@@ -676,7 +687,7 @@ html, body {
 
 .moon-illum {
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .moon-canvas {

@@ -40,9 +40,10 @@ export function renderSun(el, loc) {
       <div class="sun-phases">
         ${SOLAR_ROWS.map((r, i) => {
           const t = today[r.key];
-          const past = t && t < now;
+          const invalid = !t || isNaN(t);
+          const past = !invalid && t < now;
           const active = i === activeIdx;
-          return `<div class="sun-row${past ? ' sun-past' : ''}${active ? ' sun-active' : ''}">
+          return `<div class="sun-row${invalid ? ' sun-invalid' : past ? ' sun-past' : ''}${active ? ' sun-active' : ''}">
             <span class="sun-label">${r.label}</span>
             <span class="mono">${fmt(t)}</span>
           </div>`;
