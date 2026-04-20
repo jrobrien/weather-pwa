@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d1117" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Weather PWA</title>
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <script type="module" crossorigin src="/weather-pwa/assets/index-mopFEjUW.js"></script>
+    <link rel="stylesheet" crossorigin href="/weather-pwa/assets/index-DdsP4KBc.css">
+  <link rel="manifest" href="/weather-pwa/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/weather-pwa/registerSW.js"></script></head>
+  <body>
+    <div id="app">
+      <header id="app-header">
+        <button id="location-btn" aria-label="Change location">
+          <span id="location-name">Select location</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </button>
+      </header>
+
+      <main id="view-container">
+        <section id="view-weather" class="view active" aria-label="Weather forecast"></section>
+        <section id="view-tides"   class="view"        aria-label="Tide predictions"></section>
+        <section id="view-sun"     class="view"        aria-label="Sun and moon"></section>
+        <section id="view-map"     class="view view-map" aria-label="Location map"></section>
+      </main>
+
+      <nav id="tab-bar" role="navigation" aria-label="Main navigation">
+        <button class="tab active" data-view="weather" aria-current="page">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M17.5 19a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z"/>
+            <path d="M3 15h2M3 9h18M3 12h2M21 12h-2M21 15h-2M5.5 19H15a4.5 4.5 0 0 0 0-9H5.5a3.5 3.5 0 0 0 0 7z"/>
+          </svg>
+          <span>Weather</span>
+        </button>
+        <button class="tab" data-view="tides" aria-current="false">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/>
+            <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/>
+            <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/>
+          </svg>
+          <span>Tides</span>
+        </button>
+        <button class="tab" data-view="sun" aria-current="false">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+          <span>Sun</span>
+        </button>
+        <button class="tab" data-view="map" aria-current="false">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+            <line x1="9" y1="3" x2="9" y2="18"/>
+            <line x1="15" y1="6" x2="15" y2="21"/>
+          </svg>
+          <span>Map</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Location picker modal -->
+    <div id="location-modal" class="modal" aria-modal="true" role="dialog" aria-label="Select location" hidden>
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <h2 class="modal-title">Locations</h2>
+        <ul id="location-list" role="listbox" aria-label="Saved locations"></ul>
+        <button id="add-location-btn" class="add-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Add location
+        </button>
+      </div>
+    </div>
+
+  </body>
+</html>
