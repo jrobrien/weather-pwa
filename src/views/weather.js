@@ -52,6 +52,7 @@ export async function renderWeather(el, loc) {
             <div class="wx-temp">${cur.temperature}<span class="wx-deg">°${cur.temperatureUnit}</span></div>
             <div class="wx-condition">${cur.shortForecast}</div>
             <div class="wx-sub">${cur.windDirection} ${cur.windSpeed}</div>
+            ${gp.relativeLocation?.properties?.city ? `<div class="wx-sub" style="margin-top:2px;color:var(--text-muted)">${gp.relativeLocation.properties.city}, ${gp.relativeLocation.properties.state}</div>` : ''}
           </div>
           <img class="wx-icon" src="${cur.icon.replace('size=small', 'size=medium')}" alt="">
         </div>

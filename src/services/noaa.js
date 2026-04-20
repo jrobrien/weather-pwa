@@ -172,15 +172,7 @@ export async function getTideCurve(
 
 let _stationsCache = null;
 
-/**
- * Find the nearest NOAA tide prediction station to a lat/lon.
- * Fetches the full stations list once and caches it in memory.
- *
- * @param {number} lat
- * @param {number} lon
- * @returns {Promise<{id, name, distanceMiles}|null>} null if none within 50 miles
- */
-export async function findNearestStation(lat, lon) {
+async function _getStations() {
   if (!_stationsCache) {
     const url = 'https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions';
     const res = await fetch(url);
@@ -188,25 +180,44 @@ export async function findNearestStation(lat, lon) {
     const data = await res.json();
     _stationsCache = data.stations;
   }
+  return _stationsCache;
+}
 
-  // Sort candidates by distance, then verify each one actually serves prediction
-  // data before returning — some stations in the list are gauges without harmonics.
-  const today = new Date();
-  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+async function _findNearestFromPool(lat, lon, pool) {
+  const t0 = new Date();
+  const t1 = new Date(t0.getTime() + 24 * 60 * 60 * 1000);
 
-  const candidates = _stationsCache
+  const candidates = pool
     .map(s => ({ s, d: haversine(lat, lon, parseFloat(s.lat), parseFloat(s.lng ?? s.lon)) }))
     .filter(({ d }) => d <= 50)
     .sort((a, b) => a.d - b.d)
-    .slice(0, 5); // check up to 5 nearest
+    .slice(0, 5);
 
   for (const { s, d } of candidates) {
-    if (await stationHasPredictions(s.id, today, tomorrow)) {
-      return { id: s.id, name: s.name, distanceMiles: d };
+    if (await stationHasPredictions(s.id, t0, t1)) {
+      return { id: s.id, name: s.name, distanceMiles: d, lat: parseFloat(s.lat), lon: parseFloat(s.lng ?? s.lon) };
     }
   }
-
   return null;
+}
+
+/**
+ * Find the nearest NOAA tide prediction station (any type) to a lat/lon.
+ * Includes subordinate stations (TWC, PUG, etc.) — good for hi/lo table data.
+ */
+export async function findNearestStation(lat, lon) {
+  return _findNearestFromPool(lat, lon, await _getStations());
+}
+
+/**
+ * Find the nearest primary (harmonic) station to a lat/lon.
+ * Primary stations have numeric IDs (e.g. 9410230) and support the full
+ * 6-minute curve — suitable for chart rendering.
+ */
+export async function findNearestPrimaryStation(lat, lon) {
+  const stations = await _getStations();
+  const primaries = stations.filter(s => /^\d+$/.test(s.id));
+  return _findNearestFromPool(lat, lon, primaries);
 }
 
 async function stationHasPredictions(stationId, beginDate, endDate) {

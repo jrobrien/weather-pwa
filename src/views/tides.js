@@ -21,43 +21,72 @@ export async function renderTides(el, loc) {
     const end1 = new Date(start.getTime() + 24 * 60 * 60 * 1000);   // today only for chart
     const end3 = new Date(start.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days for table
 
-    // Fetch both in parallel; curve (6-min) is optional — some stations only
-    // publish hilo harmonic predictions without 6-minute resolution data.
+    // Primary station (harmonic) for the smooth curve chart; nearest station
+    // (may be subordinate) for the hi/lo table.
+    const curveStationId   = loc.noaaPrimaryStationId ?? loc.noaaStationId;
+    const hiloStationId    = loc.noaaStationId;
+    const curveName        = loc.noaaPrimaryStationName ?? loc.noaaStationName ?? curveStationId;
+    const hiloName         = loc.noaaStationName ?? hiloStationId;
+
     const [curveResult, hiloResult] = await Promise.allSettled([
-      getTideCurve(loc.noaaStationId, start, end1),
-      getTidePredictions(loc.noaaStationId, start, end3),
+      getTideCurve(curveStationId, start, end1),
+      getTidePredictions(hiloStationId, start, end3),
     ]);
 
     if (hiloResult.status === 'rejected') throw hiloResult.reason;
 
-    const hilo = hiloResult.value;
+    const hilo  = hiloResult.value;
     const curve = curveResult.status === 'fulfilled' ? curveResult.value : null;
+
+    // Source attribution row
+    const sameStation = curveStationId === hiloStationId;
+    const sourceHtml = curve && !sameStation
+      ? `<div class="tide-sources"><span>Chart: ${curveName}</span><span class="tide-source-sep">&middot;</span><span>Table: ${hiloName}</span></div>`
+      : `<div class="tide-sources"><span>${sameStation ? 'Source' : 'Table'}: ${hiloName}</span></div>`;
+
+    let tideDay = null;
+    const tidesHtml = hilo.map(p => {
+      const t = parseT(p.t);
+      const isH = p.type === 'H';
+      const dayStr = fmtDate(t);
+      const sep = dayStr !== tideDay ? `<div class="tide-day-sep">${dayStr}</div>` : '';
+      tideDay = dayStr;
+      const ht = parseFloat(p.v).toFixed(2).padStart(5, '\u00A0');
+      return `${sep}<div class="tide-row">
+              <span class="tide-badge ${isH ? 'tide-hi' : 'tide-lo'}">${isH ? 'H' : 'L'}</span>
+              <span class="mono">${fmtTime(t)}</span>
+              <span class="mono tide-ht">${ht} ft</span>
+            </div>`;
+    }).join('');
 
     el.innerHTML = `
       ${curve ? '<canvas class="tide-canvas"></canvas>' : ''}
+      ${sourceHtml}
       <div class="card">
         <div class="section-label">Tide Table</div>
-        <div class="tide-list">
-          ${hilo.map(p => {
-            const t = parseT(p.t);
-            const isH = p.type === 'H';
-            return `<div class="tide-row">
-              <span class="tide-badge ${isH ? 'tide-hi' : 'tide-lo'}">${isH ? 'H' : 'L'}</span>
-              <span class="tide-date">${fmtDate(t)}</span>
-              <span class="mono">${fmtTime(t)}</span>
-              <span class="mono tide-ht">${parseFloat(p.v).toFixed(2)} ft</span>
-            </div>`;
-          }).join('')}
-        </div>
+        <div class="tide-list">${tidesHtml}</div>
       </div>`;
 
-    if (curve) drawChart(el.querySelector('.tide-canvas'), curve, hilo, start);
+    if (curve) {
+      // Defer drawing until the canvas has real layout dimensions — offsetWidth
+      // is 0 when the tides view is hidden (display:none) at render time.
+      const canvas = el.querySelector('.tide-canvas');
+      const ro = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          if (entry.contentRect.width > 0) {
+            ro.disconnect();
+            drawChart(entry.target, curve, hilo, start);
+          }
+        }
+      });
+      ro.observe(canvas);
+    }
   } catch (err) {
     el.innerHTML = `<div class="view-error">Tides unavailable<br><small>${err.message}</small></div>`;
   }
 }
 
-const PAD = { t: 14, r: 8, b: 24, l: 30 };
+const PAD = { t: 20, r: 8, b: 24, l: 30 };
 
 function drawChart(canvas, curve, hilo, day) {
   const dpr = window.devicePixelRatio || 1;
@@ -89,10 +118,16 @@ function drawChart(canvas, curve, hilo, day) {
   ctx.fillStyle = '#161b22';
   ctx.fillRect(0, 0, W, H);
 
+  // Date label
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText(day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), PAD.l, 13);
+
   // Horizontal grid lines + y-axis labels
-  ctx.strokeStyle = '#21262d';
+  ctx.strokeStyle = '#30363d';
   ctx.lineWidth = 1;
-  ctx.fillStyle = '#484f58';
+  ctx.fillStyle = '#8b949e';
   ctx.font = '10px ui-monospace, monospace';
   ctx.textAlign = 'right';
   for (let v = Math.ceil(minV); v <= Math.floor(maxV); v++) {
@@ -107,7 +142,7 @@ function drawChart(canvas, curve, hilo, day) {
   // Vertical grid lines + x-axis labels
   const X_HOURS = [0, 6, 12, 18, 24];
   const X_LABELS = { 0: '12a', 6: '6a', 12: '12p', 18: '6p', 24: '12a' };
-  ctx.strokeStyle = '#21262d';
+  ctx.strokeStyle = '#30363d';
   for (const h of X_HOURS) {
     const t = new Date(day.getTime() + h * 3600000);
     const x = Math.round(xOf(t)) + 0.5;
@@ -115,7 +150,7 @@ function drawChart(canvas, curve, hilo, day) {
     ctx.moveTo(x, PAD.t);
     ctx.lineTo(x, H - PAD.b);
     ctx.stroke();
-    ctx.fillStyle = '#484f58';
+    ctx.fillStyle = '#8b949e';
     ctx.textAlign = h === 0 ? 'left' : h === 24 ? 'right' : 'center';
     ctx.fillText(X_LABELS[h], h === 0 ? PAD.l : x, H - PAD.b + 12);
   }

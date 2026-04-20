@@ -68,16 +68,31 @@ html, body {
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
 #app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   height: calc(var(--header-height) + var(--safe-top));
-  padding: var(--safe-top) 16px 0;
+  padding-top: var(--safe-top);
   background: var(--bg-base);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   position: relative;
   z-index: 10;
+}
+
+#location-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: var(--header-height);
+  padding: 0 16px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#location-btn:active {
+  background: var(--bg-elevated);
 }
 
 #location-name {
@@ -87,22 +102,9 @@ html, body {
   letter-spacing: -0.01em;
 }
 
-#location-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-elevated);
+#location-btn svg {
   color: var(--accent);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-#location-btn:active {
-  background: var(--accent-dim);
+  flex-shrink: 0;
 }
 
 /* ── View container ───────────────────────────────────────────────────────── */
@@ -143,7 +145,7 @@ html, body {
   gap: 4px;
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 10px;
   font-family: var(--font);
   letter-spacing: 0.02em;
@@ -266,12 +268,12 @@ html, body {
   flex-shrink: 0;
 }
 
-.badge-fishing {
+.badge-tides {
   background: rgba(88, 166, 255, 0.15);
   color: var(--color-high-tide);
 }
 
-.badge-hiking {
+.badge-weather {
   background: rgba(63, 185, 80, 0.15);
   color: var(--color-low-tide);
 }
@@ -400,6 +402,18 @@ html, body {
 
 .kv-row span:last-child {
   color: var(--text-primary);
+}
+
+/* ── Map tab view ─────────────────────────────────────────────────────────── */
+.view-map {
+  padding: 0;
+  overflow: hidden;
+  isolation: isolate;  /* contain Leaflet's high z-indices (200–700) within this layer */
+}
+
+.map-view-container {
+  width: 100%;
+  height: 100%;
 }
 
 /* ── Weather view ─────────────────────────────────────────────────────────── */
@@ -568,16 +582,43 @@ html, body {
   color: var(--color-low-tide);
 }
 
-.tide-date {
-  flex: 1;
+/* Source attribution row shown between chart and table */
+.tide-sources {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
   color: var(--text-secondary);
-  font-size: 13px;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.tide-source-sep {
+  color: var(--text-muted);
+}
+
+.tide-day-sep {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 10px 0 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+}
+
+.tide-day-sep:first-child {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 2px;
 }
 
 .tide-ht {
   color: var(--text-secondary);
-  min-width: 48px;
+  width: 64px;
   text-align: right;
+  flex-shrink: 0;
 }
 
 /* ── Sun view ─────────────────────────────────────────────────────────────── */
@@ -718,6 +759,44 @@ html, body {
 
 .wx-refresh-btn:active {
   background: var(--accent-dim);
+}
+
+/* ── Location modal map/list toggle ──────────────────────────────────────── */
+.modal-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-header-row .modal-title {
+  margin-bottom: 0;
+}
+
+.modal-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.modal-icon-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.location-mapbox {
+  height: 55vh;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
 }
 
 /* ── Add-location map modal ───────────────────────────────────────────────── */
@@ -880,6 +959,24 @@ html, body {
   transform: rotate(-45deg);
   box-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
+
+.map-pin-dim {
+  background: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* Station dots shown on maps */
+.map-station-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.5);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+.map-station-hilo    { background: var(--color-high-tide); }
+.map-station-primary { background: var(--color-low-tide); }
+.map-station-both    { background: var(--accent); }
 
 /* ── iOS install prompt ───────────────────────────────────────────────────── */
 .ios-banner {

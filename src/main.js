@@ -1,13 +1,15 @@
 // src/main.js
-import { seedLocations, loadLocations } from './store/locations.js';
+import { seedLocations, loadLocations, migrateTypes } from './store/locations.js';
 import { renderWeather }        from './views/weather.js';
 import { renderTides }           from './views/tides.js';
 import { renderSun }             from './views/sun.js';
 import { openAddLocationModal }   from './views/add-location.js';
 import { maybeShowInstallPrompt } from './views/ios-install-prompt.js';
+import { renderMapView, destroyMapView } from './views/map-view.js';
 import { removeLocation }         from './store/locations.js';
 
-// ── Seed dev data ──────────────────────────────────────────────────────────
+// ── Seed dev data + migrate old type names ──────────────────────────────────
+migrateTypes();
 seedLocations();
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -23,7 +25,7 @@ const locationModal = document.getElementById('location-modal');
 const locationList  = document.getElementById('location-list');
 const backdrop      = locationModal.querySelector('.modal-backdrop');
 const addLocationBtn = document.getElementById('add-location-btn');
-const tideTab       = document.querySelector('.tab[data-view="tides"]');
+const tideTab = document.querySelector('.tab[data-view="tides"]');
 
 // ── Tab navigation ─────────────────────────────────────────────────────────
 function switchView(viewName) {
@@ -38,6 +40,13 @@ function switchView(viewName) {
   views.forEach(view => {
     view.classList.toggle('active', view.id === `view-${viewName}`);
   });
+
+  if (viewName === 'map') {
+    const loc = getSelectedLocation();
+    const mapEl = document.getElementById('view-map');
+    if (loc) renderMapView(mapEl, loc);
+    else renderPlaceholder(mapEl, 'Select a location to view map.');
+  }
 }
 
 tabs.forEach(tab => {
@@ -89,8 +98,9 @@ function renderLocationList() {
     inner.className = 'location-item' + (loc.id === selectedLocationId ? ' selected' : '');
     inner.setAttribute('role', 'option');
     inner.setAttribute('aria-selected', loc.id === selectedLocationId);
+    const badgeLabel = loc.type === 'weather' ? 'WX' : 'Tides';
     inner.innerHTML = `
-      <span class="location-type-badge badge-${loc.type}">${loc.type}</span>
+      <span class="location-type-badge badge-${loc.type}">${badgeLabel}</span>
       <span class="location-item-name">${loc.name}</span>
       <span class="location-item-coords">${loc.lat.toFixed(2)}, ${loc.lon.toFixed(2)}</span>
     `;
@@ -126,6 +136,7 @@ function selectLocation(id) {
 locationBtn.addEventListener('click', openLocationModal);
 backdrop.addEventListener('click', closeLocationModal);
 
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeLocationModal();
 });
@@ -137,7 +148,7 @@ addLocationBtn.addEventListener('click', () => {
     selectedLocationId = newId;
     updateHeaderLocation();
     loadViewData();
-  });
+  }, getSelectedLocation());
 });
 
 // ── Swipe to delete ────────────────────────────────────────────────────────
@@ -236,7 +247,12 @@ function loadViewData() {
   }
 
   renderSun(document.getElementById('view-sun'), loc);
-  renderPlaceholder(document.getElementById('view-alarm'), 'Alarms coming soon.');
+
+  if (activeView === 'map') {
+    renderMapView(document.getElementById('view-map'), loc);
+  } else {
+    destroyMapView();
+  }
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────

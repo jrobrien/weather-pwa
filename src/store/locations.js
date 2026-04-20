@@ -48,17 +48,19 @@ export function saveLocations(locations) {
  * @param {object} location — all fields except id
  * @returns {object} the new location with id assigned
  */
-export function addLocation({ name, lat, lon, type, noaaStationId = null }) {
+export function addLocation({
+  name, lat, lon, type,
+  noaaStationId = null, noaaStationName = null, noaaStationLat = null, noaaStationLon = null,
+  noaaPrimaryStationId = null, noaaPrimaryStationName = null, noaaPrimaryStationLat = null, noaaPrimaryStationLon = null,
+}) {
   const locations = loadLocations();
 
   const newLocation = {
     id: crypto.randomUUID(),
-    name,
-    lat,
-    lon,
-    type,
-    noaaStationId,
-    nwsGridPoint: null   // populated on first weather fetch
+    name, lat, lon, type,
+    noaaStationId, noaaStationName, noaaStationLat, noaaStationLon,
+    noaaPrimaryStationId, noaaPrimaryStationName, noaaPrimaryStationLat, noaaPrimaryStationLon,
+    nwsGridPoint: null
   };
 
   locations.push(newLocation);
@@ -120,22 +122,29 @@ export function getLocation(id) {
  * Call this once from main.js during development.
  * Remove before production.
  */
+export function migrateTypes() {
+  const locs = loadLocations();
+  const MAP = { fishing: 'tides', hiking: 'weather' };
+  const next = locs.map(loc => MAP[loc.type] ? { ...loc, type: MAP[loc.type] } : loc);
+  if (next.some((loc, i) => loc.type !== locs[i].type)) saveLocations(next);
+}
+
 export function seedLocations() {
   if (loadLocations().length > 0) return; // don't overwrite existing data
 
   addLocation({
-    name: 'Cuyamaca (hiking)',
+    name: 'Cuyamaca',
     lat: 32.8737,
     lon: -116.4162,
-    type: 'hiking',
+    type: 'weather',
     noaaStationId: null
   });
 
   addLocation({
-    name: 'Shelter Island (fishing)',
+    name: 'Shelter Island',
     lat: 32.7157,
     lon: -117.1795,
-    type: 'fishing',
+    type: 'tides',
     noaaStationId: '9410230'   // Scripps Pier
   });
 }
