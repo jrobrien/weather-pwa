@@ -189,16 +189,33 @@ export async function findNearestStation(lat, lon) {
     _stationsCache = data.stations;
   }
 
-  let nearest = null;
-  let minDist = Infinity;
+  // Sort candidates by distance, then verify each one actually serves prediction
+  // data before returning — some stations in the list are gauges without harmonics.
+  const today = new Date();
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
-  for (const s of _stationsCache) {
-    const d = haversine(lat, lon, parseFloat(s.lat), parseFloat(s.lng ?? s.lon));
-    if (d < minDist) { minDist = d; nearest = s; }
+  const candidates = _stationsCache
+    .map(s => ({ s, d: haversine(lat, lon, parseFloat(s.lat), parseFloat(s.lng ?? s.lon)) }))
+    .filter(({ d }) => d <= 50)
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 5); // check up to 5 nearest
+
+  for (const { s, d } of candidates) {
+    if (await stationHasPredictions(s.id, today, tomorrow)) {
+      return { id: s.id, name: s.name, distanceMiles: d };
+    }
   }
 
-  if (!nearest || minDist > 50) return null;
-  return { id: nearest.id, name: nearest.name, distanceMiles: minDist };
+  return null;
+}
+
+async function stationHasPredictions(stationId, beginDate, endDate) {
+  try {
+    const predictions = await getTidePredictions(stationId, beginDate, endDate);
+    return Array.isArray(predictions) && predictions.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 function haversine(lat1, lon1, lat2, lon2) {
