@@ -72,7 +72,7 @@ export function openAddLocationModal(onAdded) {
     }).addTo(map);
 
     // Default to San Diego area; GPS will override
-    map.setView([32.72, -117.15], 10);
+    map.setView([32.72, -117.15], 12);
     centerOnGPS();
 
     map.on('click', e => placePin(e.latlng));
@@ -82,7 +82,7 @@ export function openAddLocationModal(onAdded) {
   function centerOnGPS() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      pos => map?.setView([pos.coords.latitude, pos.coords.longitude], 10),
+      pos => map?.setView([pos.coords.latitude, pos.coords.longitude], 12),
       () => {},  // stay at default if denied
       { timeout: 8000, maximumAge: 60000 }
     );
@@ -103,6 +103,10 @@ export function openAddLocationModal(onAdded) {
       nearestStation = await findNearestStation(latlng.lat, latlng.lng);
       if (nearestStation) {
         hint.innerHTML = `<span class="station-found">Station: ${nearestStation.name} &mdash; ${nearestStation.distanceMiles.toFixed(0)} mi</span>`;
+        if (!nameInput.value.trim()) {
+          nameInput.value = nearestStation.name;
+          updateSave();
+        }
       } else {
         hint.innerHTML = `<span class="station-none">No tide station within 50 miles</span>`;
         nearestStation = null;

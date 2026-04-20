@@ -142,59 +142,80 @@ addLocationBtn.addEventListener('click', () => {
 
 // ── Swipe to delete ────────────────────────────────────────────────────────
 function attachSwipeDelete(wrap, inner, loc) {
-  const THRESHOLD = 90; // px to trigger delete
-  let startX = 0, startY = 0, dx = 0, dragging = false;
+  const THRESHOLD = 80;
 
-  inner.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    dx = 0;
-    dragging = false;
+  // Real DOM button — pseudo-elements can't receive clicks
+  const delBtn = document.createElement('button');
+  delBtn.className = 'swipe-del-btn';
+  delBtn.textContent = 'Delete';
+  delBtn.setAttribute('aria-label', `Delete ${loc.name}`);
+  wrap.insertBefore(delBtn, inner);
+  delBtn.addEventListener('click', doDelete);
+
+  let startX = 0, startY = 0, dx = 0, dragging = false, active = false;
+
+  function onStart(clientX, clientY) {
+    startX = clientX; startY = clientY;
+    dx = 0; dragging = false; active = true;
     inner.style.transition = 'none';
     delete inner.dataset.swiping;
-  }, { passive: true });
+  }
 
-  inner.addEventListener('touchmove', e => {
-    dx = e.touches[0].clientX - startX;
-    const dy = e.touches[0].clientY - startY;
-    // Only activate for a clear leftward horizontal swipe
+  function onMove(clientX, clientY) {
+    if (!active) return;
+    dx = clientX - startX;
+    const dy = clientY - startY;
     if (!dragging && (Math.abs(dx) < 8 || Math.abs(dy) > Math.abs(dx))) return;
-    if (dx > 0) return; // no rightward swipe
+    if (dx > 0) return;
     dragging = true;
     inner.dataset.swiping = '1';
     inner.style.transform = `translateX(${Math.max(dx, -THRESHOLD - 20)}px)`;
     wrap.classList.toggle('swipe-open', dx < -THRESHOLD / 2);
-  }, { passive: true });
+  }
 
-  inner.addEventListener('touchend', () => {
+  function onEnd() {
+    if (!active) return;
+    active = false;
     inner.style.transition = '';
-    if (!dragging) return;
-
+    if (!dragging) { setTimeout(() => delete inner.dataset.swiping, 50); return; }
     if (dx < -THRESHOLD) {
-      // Animate out then delete
-      inner.style.transform = `translateX(-100%)`;
-      wrap.style.transition = 'max-height 0.25s ease, opacity 0.25s ease';
-      wrap.style.maxHeight = wrap.offsetHeight + 'px';
-      requestAnimationFrame(() => {
-        wrap.style.maxHeight = '0';
-        wrap.style.opacity = '0';
-      });
-      setTimeout(() => {
-        removeLocation(loc.id);
-        if (selectedLocationId === loc.id) {
-          selectedLocationId = loadLocations()[0]?.id ?? null;
-          updateHeaderLocation();
-          loadViewData();
-        }
-        renderLocationList();
-      }, 260);
+      doDelete();
     } else {
       inner.style.transform = '';
       wrap.classList.remove('swipe-open');
     }
-    // Clear swiping flag after a tick so the tap handler doesn't fire
     setTimeout(() => delete inner.dataset.swiping, 50);
-  }, { passive: true });
+  }
+
+  function doDelete() {
+    inner.style.transform = 'translateX(-100%)';
+    wrap.style.transition = 'max-height 0.25s ease, opacity 0.25s ease';
+    wrap.style.maxHeight = wrap.offsetHeight + 'px';
+    requestAnimationFrame(() => { wrap.style.maxHeight = '0'; wrap.style.opacity = '0'; });
+    setTimeout(() => {
+      removeLocation(loc.id);
+      if (selectedLocationId === loc.id) {
+        selectedLocationId = loadLocations()[0]?.id ?? null;
+        updateHeaderLocation();
+        loadViewData();
+      }
+      renderLocationList();
+    }, 260);
+  }
+
+  // Touch
+  inner.addEventListener('touchstart', e => onStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  inner.addEventListener('touchmove',  e => onMove(e.touches[0].clientX, e.touches[0].clientY),  { passive: true });
+  inner.addEventListener('touchend',   onEnd, { passive: true });
+
+  // Mouse — attach move/up to document so dragging outside the element still works
+  inner.addEventListener('mousedown', e => {
+    onStart(e.clientX, e.clientY);
+    const up   = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); onEnd(); };
+    const move = e => onMove(e.clientX, e.clientY);
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  });
 }
 
 // ── View data loading ──────────────────────────────────────────────────────

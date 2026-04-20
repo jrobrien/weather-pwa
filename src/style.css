@@ -37,6 +37,7 @@
   /* Layout */
   --header-height:  52px;
   --tabbar-height:  60px;
+  --safe-top:       env(safe-area-inset-top, 0px);
   --safe-bottom:    env(safe-area-inset-bottom, 0px);
 
   /* Typography */
@@ -70,8 +71,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: var(--header-height);
-  padding: 0 16px;
+  height: calc(var(--header-height) + var(--safe-top));
+  padding: var(--safe-top) 16px 0;
   background: var(--bg-base);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -203,8 +204,8 @@ html, body {
   background: var(--bg-modal);
   border-radius: 16px 16px 0 0;
   border-top: 1px solid var(--border);
-  padding: 12px 20px 32px;
-  max-height: 70dvh;
+  padding: 12px 20px max(32px, var(--safe-bottom));
+  max-height: calc(100dvh - var(--safe-top) - 60px);
   overflow-y: auto;
 }
 
@@ -651,21 +652,20 @@ html, body {
   opacity: 1;
 }
 
-/* Red "Delete" strip revealed behind the sliding item */
-.location-item-wrap::after {
-  content: 'Delete';
+/* Real delete button revealed behind the sliding item */
+.swipe-del-btn {
   position: absolute;
   right: 0;
   top: 0;
   bottom: 0;
-  width: 90px;
+  width: 80px;
   background: var(--color-danger);
   color: #fff;
+  border: none;
   font-size: 13px;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-family: var(--font);
+  cursor: pointer;
   border-radius: 0 8px 8px 0;
 }
 
