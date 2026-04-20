@@ -167,3 +167,45 @@ export async function getTideCurve(
   // Note: no .type field — that only comes with interval: 'hilo'
   // Overlay getTidePredictions() hilo results to mark H/L on the chart.
 }
+
+// ─── Station finder ──────────────────────────────────────────────────────────
+
+let _stationsCache = null;
+
+/**
+ * Find the nearest NOAA tide prediction station to a lat/lon.
+ * Fetches the full stations list once and caches it in memory.
+ *
+ * @param {number} lat
+ * @param {number} lon
+ * @returns {Promise<{id, name, distanceMiles}|null>} null if none within 50 miles
+ */
+export async function findNearestStation(lat, lon) {
+  if (!_stationsCache) {
+    const url = 'https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`NOAA stations list failed: ${res.status}`);
+    const data = await res.json();
+    _stationsCache = data.stations;
+  }
+
+  let nearest = null;
+  let minDist = Infinity;
+
+  for (const s of _stationsCache) {
+    const d = haversine(lat, lon, parseFloat(s.lat), parseFloat(s.lng ?? s.lon));
+    if (d < minDist) { minDist = d; nearest = s; }
+  }
+
+  if (!nearest || minDist > 50) return null;
+  return { id: nearest.id, name: nearest.name, distanceMiles: minDist };
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 3959; // miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}

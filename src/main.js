@@ -1,8 +1,10 @@
 // src/main.js
 import { seedLocations, loadLocations } from './store/locations.js';
-import { renderWeather } from './views/weather.js';
-import { renderTides }   from './views/tides.js';
-import { renderSun }     from './views/sun.js';
+import { renderWeather }        from './views/weather.js';
+import { renderTides }           from './views/tides.js';
+import { renderSun }             from './views/sun.js';
+import { openAddLocationModal }  from './views/add-location.js';
+import { removeLocation }        from './store/locations.js';
 
 // ── Seed dev data ──────────────────────────────────────────────────────────
 seedLocations();
@@ -19,6 +21,7 @@ const locationBtn   = document.getElementById('location-btn');
 const locationModal = document.getElementById('location-modal');
 const locationList  = document.getElementById('location-list');
 const backdrop      = locationModal.querySelector('.modal-backdrop');
+const addLocationBtn = document.getElementById('add-location-btn');
 const tideTab       = document.querySelector('.tab[data-view="tides"]');
 
 // ── Tab navigation ─────────────────────────────────────────────────────────
@@ -79,15 +82,24 @@ function renderLocationList() {
 
   locations.forEach(loc => {
     const li = document.createElement('li');
-    li.className = 'location-item' + (loc.id === selectedLocationId ? ' selected' : '');
-    li.setAttribute('role', 'option');
-    li.setAttribute('aria-selected', loc.id === selectedLocationId);
-    li.innerHTML = `
+    li.className = 'location-item-wrap';
+
+    const inner = document.createElement('div');
+    inner.className = 'location-item' + (loc.id === selectedLocationId ? ' selected' : '');
+    inner.setAttribute('role', 'option');
+    inner.setAttribute('aria-selected', loc.id === selectedLocationId);
+    inner.innerHTML = `
       <span class="location-type-badge badge-${loc.type}">${loc.type}</span>
       <span class="location-item-name">${loc.name}</span>
       <span class="location-item-coords">${loc.lat.toFixed(2)}, ${loc.lon.toFixed(2)}</span>
     `;
-    li.addEventListener('click', () => selectLocation(loc.id));
+    inner.addEventListener('click', () => {
+      if (inner.dataset.swiping) return; // ignore tap if swipe was in progress
+      selectLocation(loc.id);
+    });
+
+    li.appendChild(inner);
+    attachSwipeDelete(li, inner, loc);
     locationList.appendChild(li);
   });
 }
@@ -113,10 +125,76 @@ function selectLocation(id) {
 locationBtn.addEventListener('click', openLocationModal);
 backdrop.addEventListener('click', closeLocationModal);
 
-// Close modal on Escape
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeLocationModal();
 });
+
+// ── Add location ───────────────────────────────────────────────────────────
+addLocationBtn.addEventListener('click', () => {
+  closeLocationModal();
+  openAddLocationModal(newId => {
+    selectedLocationId = newId;
+    updateHeaderLocation();
+    loadViewData();
+  });
+});
+
+// ── Swipe to delete ────────────────────────────────────────────────────────
+function attachSwipeDelete(wrap, inner, loc) {
+  const THRESHOLD = 90; // px to trigger delete
+  let startX = 0, startY = 0, dx = 0, dragging = false;
+
+  inner.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    dx = 0;
+    dragging = false;
+    inner.style.transition = 'none';
+    delete inner.dataset.swiping;
+  }, { passive: true });
+
+  inner.addEventListener('touchmove', e => {
+    dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    // Only activate for a clear leftward horizontal swipe
+    if (!dragging && (Math.abs(dx) < 8 || Math.abs(dy) > Math.abs(dx))) return;
+    if (dx > 0) return; // no rightward swipe
+    dragging = true;
+    inner.dataset.swiping = '1';
+    inner.style.transform = `translateX(${Math.max(dx, -THRESHOLD - 20)}px)`;
+    wrap.classList.toggle('swipe-open', dx < -THRESHOLD / 2);
+  }, { passive: true });
+
+  inner.addEventListener('touchend', () => {
+    inner.style.transition = '';
+    if (!dragging) return;
+
+    if (dx < -THRESHOLD) {
+      // Animate out then delete
+      inner.style.transform = `translateX(-100%)`;
+      wrap.style.transition = 'max-height 0.25s ease, opacity 0.25s ease';
+      wrap.style.maxHeight = wrap.offsetHeight + 'px';
+      requestAnimationFrame(() => {
+        wrap.style.maxHeight = '0';
+        wrap.style.opacity = '0';
+      });
+      setTimeout(() => {
+        removeLocation(loc.id);
+        if (selectedLocationId === loc.id) {
+          selectedLocationId = loadLocations()[0]?.id ?? null;
+          updateHeaderLocation();
+          loadViewData();
+        }
+        renderLocationList();
+      }, 260);
+    } else {
+      inner.style.transform = '';
+      wrap.classList.remove('swipe-open');
+    }
+    // Clear swiping flag after a tick so the tap handler doesn't fire
+    setTimeout(() => delete inner.dataset.swiping, 50);
+  }, { passive: true });
+}
 
 // ── View data loading ──────────────────────────────────────────────────────
 function loadViewData() {

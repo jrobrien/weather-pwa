@@ -642,6 +642,245 @@ html, body {
   border-radius: 50%;
 }
 
+/* ── Swipe-to-delete ──────────────────────────────────────────────────────── */
+.location-item-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  max-height: 200px;  /* used for collapse animation */
+  opacity: 1;
+}
+
+/* Red "Delete" strip revealed behind the sliding item */
+.location-item-wrap::after {
+  content: 'Delete';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 90px;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 8px 8px 0;
+}
+
+.location-item {
+  position: relative;
+  background: var(--bg-modal); /* covers the delete strip while not swiping */
+  transition: transform 0.2s ease;
+  border-radius: 8px;
+}
+
+/* ── Weather — fetch timestamp + refresh ──────────────────────────────────── */
+.wx-fetch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.wx-age-badge {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.wx-age-badge.wx-age-warn {
+  color: var(--color-warning);
+}
+
+.wx-age-badge.wx-age-danger {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.wx-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 12px;
+  font-family: var(--font);
+  padding: 5px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.wx-refresh-btn:active {
+  background: var(--accent-dim);
+}
+
+/* ── Add-location map modal ───────────────────────────────────────────────── */
+.add-loc-modal {
+  justify-content: flex-end;
+}
+
+.add-loc-sheet {
+  position: relative;
+  background: var(--bg-modal);
+  border-radius: 16px 16px 0 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  max-height: 92dvh;
+  overflow: hidden;
+}
+
+.add-loc-map-wrap {
+  position: relative;
+  height: 52vh;
+  flex-shrink: 0;
+}
+
+.add-loc-mapbox {
+  width: 100%;
+  height: 100%;
+}
+
+/* GPS button overlaid on the map */
+.add-loc-gps-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bg-modal);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.add-loc-gps-btn:active {
+  background: var(--accent-dim);
+}
+
+/* Form panel below the map */
+.add-loc-form {
+  padding: 16px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-loc-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  min-height: 18px;
+}
+
+.station-found {
+  color: var(--accent);
+}
+
+.station-none {
+  color: var(--text-secondary);
+}
+
+.add-loc-name-input {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 15px;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.add-loc-name-input:focus {
+  border-color: var(--accent);
+}
+
+.add-loc-type-row {
+  display: flex;
+  gap: 8px;
+}
+
+.add-type-btn {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.add-type-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.add-loc-footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.add-loc-cancel {
+  flex: 1;
+  padding: 11px 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.add-loc-save {
+  flex: 2;
+  padding: 11px 0;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #000;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.add-loc-save:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Custom map pin (avoids Leaflet default-icon asset issues) */
+.map-pin {
+  width: 22px;
+  height: 28px;
+  background: var(--accent);
+  border: 2px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+
 /* ── Utility ──────────────────────────────────────────────────────────────── */
 .sr-only {
   position: absolute;
