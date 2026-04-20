@@ -1,60 +1,144 @@
-import './style.css'
-import javascriptLogo from './assets/javascript.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import { setupCounter } from './counter.js'
+// src/main.js
+import { seedLocations, loadLocations } from './store/locations.js';
+import { renderWeather } from './views/weather.js';
+import { renderTides }   from './views/tides.js';
+import { renderSun }     from './views/sun.js';
 
-document.querySelector('#app').innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${javascriptLogo}" class="framework" alt="JavaScript logo"/>
-    <img src=${viteLogo} class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.js</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+// ── Seed dev data ──────────────────────────────────────────────────────────
+seedLocations();
 
-<div class="ticks"></div>
+// ── State ──────────────────────────────────────────────────────────────────
+let activeView = 'weather';
+let selectedLocationId = loadLocations()[0]?.id ?? null;
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src=${viteLogo} alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
-          <img class="button-icon" src="${javascriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const tabs          = document.querySelectorAll('.tab');
+const views         = document.querySelectorAll('.view');
+const locationName  = document.getElementById('location-name');
+const locationBtn   = document.getElementById('location-btn');
+const locationModal = document.getElementById('location-modal');
+const locationList  = document.getElementById('location-list');
+const backdrop      = locationModal.querySelector('.modal-backdrop');
+const tideTab       = document.querySelector('.tab[data-view="tides"]');
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
+// ── Tab navigation ─────────────────────────────────────────────────────────
+function switchView(viewName) {
+  activeView = viewName;
 
-setupCounter(document.querySelector('#counter'))
+  tabs.forEach(tab => {
+    const isActive = tab.dataset.view === viewName;
+    tab.classList.toggle('active', isActive);
+    tab.setAttribute('aria-current', isActive ? 'page' : 'false');
+  });
+
+  views.forEach(view => {
+    view.classList.toggle('active', view.id === `view-${viewName}`);
+  });
+}
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => switchView(tab.dataset.view));
+});
+
+// ── Location helpers ───────────────────────────────────────────────────────
+function getSelectedLocation() {
+  return loadLocations().find(loc => loc.id === selectedLocationId) ?? null;
+}
+
+function updateHeaderLocation() {
+  const loc = getSelectedLocation();
+  locationName.textContent = loc ? loc.name : 'Select location';
+
+  // Hide tides tab for hiking spots that have no NOAA station
+  const hasTides = loc?.noaaStationId != null;
+  tideTab.classList.toggle('hidden', !hasTides);
+
+  // If currently on tides view and location has no tides, switch to weather
+  if (!hasTides && activeView === 'tides') {
+    switchView('weather');
+  }
+}
+
+function renderPlaceholder(viewEl, message) {
+  viewEl.innerHTML = `
+    <div class="placeholder">
+      <p>${message}</p>
+    </div>
+  `;
+}
+
+// ── Location modal ─────────────────────────────────────────────────────────
+function renderLocationList() {
+  const locations = loadLocations();
+  locationList.innerHTML = '';
+
+  if (locations.length === 0) {
+    locationList.innerHTML = '<li style="color: var(--text-muted); font-size: 14px; padding: 8px 10px;">No locations saved yet.</li>';
+    return;
+  }
+
+  locations.forEach(loc => {
+    const li = document.createElement('li');
+    li.className = 'location-item' + (loc.id === selectedLocationId ? ' selected' : '');
+    li.setAttribute('role', 'option');
+    li.setAttribute('aria-selected', loc.id === selectedLocationId);
+    li.innerHTML = `
+      <span class="location-type-badge badge-${loc.type}">${loc.type}</span>
+      <span class="location-item-name">${loc.name}</span>
+      <span class="location-item-coords">${loc.lat.toFixed(2)}, ${loc.lon.toFixed(2)}</span>
+    `;
+    li.addEventListener('click', () => selectLocation(loc.id));
+    locationList.appendChild(li);
+  });
+}
+
+function openLocationModal() {
+  renderLocationList();
+  locationModal.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLocationModal() {
+  locationModal.hidden = true;
+  document.body.style.overflow = '';
+}
+
+function selectLocation(id) {
+  selectedLocationId = id;
+  updateHeaderLocation();
+  loadViewData();
+  closeLocationModal();
+}
+
+locationBtn.addEventListener('click', openLocationModal);
+backdrop.addEventListener('click', closeLocationModal);
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLocationModal();
+});
+
+// ── View data loading ──────────────────────────────────────────────────────
+function loadViewData() {
+  const loc = getSelectedLocation();
+
+  if (!loc) {
+    views.forEach(view => renderPlaceholder(view, 'Select a location to get started.'));
+    return;
+  }
+
+  renderWeather(document.getElementById('view-weather'), loc);
+
+  if (loc.noaaStationId) {
+    renderTides(document.getElementById('view-tides'), loc);
+  } else {
+    renderPlaceholder(document.getElementById('view-tides'), 'No tide station for this location.');
+  }
+
+  renderSun(document.getElementById('view-sun'), loc);
+  renderPlaceholder(document.getElementById('view-alarm'), 'Alarms coming soon.');
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+updateHeaderLocation();
+loadViewData();
