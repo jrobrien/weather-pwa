@@ -3,8 +3,9 @@ import { seedLocations, loadLocations } from './store/locations.js';
 import { renderWeather }        from './views/weather.js';
 import { renderTides }           from './views/tides.js';
 import { renderSun }             from './views/sun.js';
-import { openAddLocationModal }  from './views/add-location.js';
-import { removeLocation }        from './store/locations.js';
+import { openAddLocationModal }   from './views/add-location.js';
+import { maybeShowInstallPrompt } from './views/ios-install-prompt.js';
+import { removeLocation }         from './store/locations.js';
 
 // ── Seed dev data ──────────────────────────────────────────────────────────
 seedLocations();
@@ -220,3 +221,4 @@ function loadViewData() {
 // ── Init ───────────────────────────────────────────────────────────────────
 updateHeaderLocation();
 loadViewData();
+maybeShowInstallPrompt();
