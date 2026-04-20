@@ -21,13 +21,20 @@ export async function renderTides(el, loc) {
     const end1 = new Date(start.getTime() + 24 * 60 * 60 * 1000);   // today only for chart
     const end3 = new Date(start.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days for table
 
-    const [curve, hilo] = await Promise.all([
+    // Fetch both in parallel; curve (6-min) is optional — some stations only
+    // publish hilo harmonic predictions without 6-minute resolution data.
+    const [curveResult, hiloResult] = await Promise.allSettled([
       getTideCurve(loc.noaaStationId, start, end1),
       getTidePredictions(loc.noaaStationId, start, end3),
     ]);
 
+    if (hiloResult.status === 'rejected') throw hiloResult.reason;
+
+    const hilo = hiloResult.value;
+    const curve = curveResult.status === 'fulfilled' ? curveResult.value : null;
+
     el.innerHTML = `
-      <canvas class="tide-canvas"></canvas>
+      ${curve ? '<canvas class="tide-canvas"></canvas>' : ''}
       <div class="card">
         <div class="section-label">Tide Table</div>
         <div class="tide-list">
@@ -44,7 +51,7 @@ export async function renderTides(el, loc) {
         </div>
       </div>`;
 
-    drawChart(el.querySelector('.tide-canvas'), curve, hilo, start);
+    if (curve) drawChart(el.querySelector('.tide-canvas'), curve, hilo, start);
   } catch (err) {
     el.innerHTML = `<div class="view-error">Tides unavailable<br><small>${err.message}</small></div>`;
   }
