@@ -75,12 +75,17 @@ html, body {
   flex-shrink: 0;
   position: relative;
   z-index: 10;
-}
-
-#location-btn {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+}
+
+/* Full-width control: pin pinned left, caret pinned right, name dead-centre.
+   The 1fr side columns stay equal, so the auto middle column is always
+   centred regardless of pin/caret width. */
+#location-btn {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   width: 100%;
   height: var(--header-height);
   padding: 0 16px;
@@ -96,15 +101,38 @@ html, body {
 }
 
 #location-name {
-  font-size: 17px;
-  font-weight: 500;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.01em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #location-btn svg {
-  color: var(--accent);
   flex-shrink: 0;
+}
+
+.loc-pin {
+  justify-self: start;
+  color: var(--accent);
+}
+
+.loc-caret {
+  justify-self: end;
+  color: var(--text-secondary);
+}
+
+/* Brief pulse while geolocation resolves the nearest saved location */
+#location-btn.locating .loc-pin {
+  animation: loc-pulse 1s ease-in-out infinite;
+}
+
+@keyframes loc-pulse {
+  50% { opacity: 0.25; }
 }
 
 /* ── View container ───────────────────────────────────────────────────────── */
@@ -256,6 +284,19 @@ html, body {
 
 .location-item.selected .location-item-name {
   color: var(--accent);
+  font-weight: 600;
+}
+
+.location-item-check {
+  display: none;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.location-item.selected .location-item-check {
+  display: inline;
 }
 
 .location-type-badge {

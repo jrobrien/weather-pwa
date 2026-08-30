@@ -14,11 +14,14 @@
   <body>
     <div id="app">
       <header id="app-header">
-        <button id="location-btn" aria-label="Change location">
-          <span id="location-name">Select location</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="location-btn" aria-label="Change location" aria-haspopup="dialog">
+          <svg class="loc-pin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
             <circle cx="12" cy="10" r="3"/>
+          </svg>
+          <span id="location-name">Select location</span>
+          <svg class="loc-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M6 9l6 6 6-6"/>
           </svg>
         </button>
       </header>

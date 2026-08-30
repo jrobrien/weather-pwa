@@ -7,6 +7,7 @@ import { openAddLocationModal }   from './views/add-location.js';
 import { maybeShowInstallPrompt } from './views/ios-install-prompt.js';
 import { renderMapView, destroyMapView } from './views/map-view.js';
 import { removeLocation }         from './store/locations.js';
+import { getCurrentPosition, nearestLocation } from './services/geo.js';
 
 // ── Seed dev data + migrate old type names ──────────────────────────────────
 migrateTypes();
@@ -103,6 +104,7 @@ function renderLocationList() {
       <span class="location-type-badge badge-${loc.type}">${badgeLabel}</span>
       <span class="location-item-name">${loc.name}</span>
       <span class="location-item-coords">${loc.lat.toFixed(2)}, ${loc.lon.toFixed(2)}</span>
+      <span class="location-item-check" aria-hidden="true">✓</span>
     `;
     inner.addEventListener('click', () => {
       if (inner.dataset.swiping) return; // ignore tap if swipe was in progress
@@ -255,7 +257,32 @@ function loadViewData() {
   }
 }
 
+// ── Default to the saved location nearest the device ───────────────────────
+// Renders immediately with the first saved location, then quietly swaps to the
+// nearest one once geolocation resolves. Any failure (denied, timeout, no
+// support) leaves the initial choice in place.
+async function selectNearestToDevice() {
+  const locations = loadLocations();
+  if (locations.length < 2) return; // nothing to disambiguate
+
+  locationBtn.classList.add('locating');
+  try {
+    const { lat, lon } = await getCurrentPosition();
+    const nearest = nearestLocation(lat, lon, locations);
+    if (nearest && nearest.id !== selectedLocationId) {
+      selectedLocationId = nearest.id;
+      updateHeaderLocation();
+      loadViewData();
+    }
+  } catch {
+    // keep the current default
+  } finally {
+    locationBtn.classList.remove('locating');
+  }
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
 updateHeaderLocation();
 loadViewData();
+selectNearestToDevice();
 maybeShowInstallPrompt();
